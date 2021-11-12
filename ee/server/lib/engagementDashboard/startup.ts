@@ -1,7 +1,7 @@
 import { fillFirstDaysOfMessagesIfNeeded, handleMessagesDeleted, handleMessagesSent } from './messages';
 import { fillFirstDaysOfUsersIfNeeded, handleUserCreated } from './users';
 import { callbacks } from '../../../../app/callbacks/lib/callbacks';
-import { Permissions } from '../../../../app/models/server';
+import { Permissions } from '../../../../app/models/server/raw';
 
 export const attachCallbacks = (): void => {
 	callbacks.add('afterSaveMessage', handleMessagesSent, callbacks.priority.MEDIUM, 'engagementDashboard.afterSaveMessage');

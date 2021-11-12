@@ -1,9 +1,7 @@
 import moment from 'moment';
 
-import AnalyticsRaw from '../../../../app/models/server/raw/Analytics';
 import { roomTypes } from '../../../../app/utils/server';
-import { Messages } from '../../../../app/models/server/raw';
-import { Analytics } from '../../../../app/models/server';
+import { Messages, Analytics } from '../../../../app/models/server/raw';
 import { convertDateToInt, diffBetweenDaysInclusive, convertIntToDate, getTotalOfWeekItems } from './date';
 import { IDirectMessageRoom, IRoom } from '../../../../definition/IRoom';
 import { IMessage } from '../../../../definition/IMessage';
@@ -13,7 +11,7 @@ export const handleMessagesSent = (message: IMessage, room: IRoom): IMessage => 
 	if (!roomTypesToShow.includes(room.t)) {
 		return message;
 	}
-	Promise.await(AnalyticsRaw.saveMessageSent({
+	Promise.await(Analytics.saveMessageSent({
 		date: convertDateToInt(message.ts),
 		room,
 	}));
@@ -25,7 +23,7 @@ export const handleMessagesDeleted = (message: IMessage, room: IRoom): IMessage 
 	if (!roomTypesToShow.includes(room.t)) {
 		return message;
 	}
-	Promise.await(AnalyticsRaw.saveMessageDeleted({
+	Promise.await(Analytics.saveMessageDeleted({
 		date: convertDateToInt(message.ts),
 		room,
 	}));
@@ -33,20 +31,30 @@ export const handleMessagesDeleted = (message: IMessage, room: IRoom): IMessage 
 };
 
 export const fillFirstDaysOfMessagesIfNeeded = async (date: Date): Promise<void> => {
-	const messagesFromAnalytics = await AnalyticsRaw.findByTypeBeforeDate({
+	const messagesFromAnalytics = await Analytics.findByTypeBeforeDate({
 		type: 'messages',
 		date: convertDateToInt(date),
 	}).toArray();
 	if (!messagesFromAnalytics.length) {
 		const startOfPeriod = moment(date).subtract(90, 'days').toDate();
-		const messages = await Messages.getTotalOfMessagesSentByDate({
+		const messages: {
+			date: string;
+			room: {
+				_id: IRoom['_id'];
+				name: IRoom['name'];
+				t: IRoom['t'];
+				usernames: IRoom['usernames'];
+			};
+			type: 'messages';
+			messages: number;
+		}[] = await Messages.getTotalOfMessagesSentByDate({
 			start: startOfPeriod,
 			end: date,
 		});
-		messages.forEach((message) => Analytics.insert({
+		await Promise.all(messages.map((message) => Analytics.insertOne({
 			...message,
 			date: parseInt(message.date),
-		}));
+		})));
 	}
 };
 
@@ -66,16 +74,16 @@ export const findWeeklyMessagesSentData = async ({ start, end }: { start: Date; 
 	const startOfLastWeek = moment(endOfLastWeek).clone().subtract(daysBetweenDates, 'days').toDate();
 	const today = convertDateToInt(end);
 	const yesterday = convertDateToInt(moment(end).clone().subtract(1, 'days').toDate());
-	const currentPeriodMessages = await AnalyticsRaw.getMessagesSentTotalByDate({
+	const currentPeriodMessages = await Analytics.getMessagesSentTotalByDate({
 		start: convertDateToInt(start),
 		end: convertDateToInt(end),
 		options: { count: daysBetweenDates, sort: { _id: -1 } },
-	});
-	const lastPeriodMessages = await AnalyticsRaw.getMessagesSentTotalByDate({
+	}).toArray();
+	const lastPeriodMessages = await Analytics.getMessagesSentTotalByDate({
 		start: convertDateToInt(startOfLastWeek),
 		end: convertDateToInt(endOfLastWeek),
 		options: { count: daysBetweenDates, sort: { _id: -1 } },
-	});
+	}).toArray();
 	const yesterdayMessages = (currentPeriodMessages.find((item) => item._id === yesterday) || {}).messages || 0;
 	const todayMessages = (currentPeriodMessages.find((item) => item._id === today) || {}).messages || 0;
 	const currentPeriodTotalOfMessages = getTotalOfWeekItems(currentPeriodMessages, 'messages');
@@ -99,11 +107,11 @@ export const findMessagesSentOrigin = async ({ start, end }: { start: Date; end:
 		messages: number;
 	}[];
 }> => {
-	const origins = await AnalyticsRaw.getMessagesOrigin({
+	const origins = await Analytics.getMessagesOrigin({
 		start: convertDateToInt(start),
 		end: convertDateToInt(end),
-	});
-	const roomTypesToShow = roomTypes.getTypesToShowOnDashboard();
+	}).toArray();
+	const roomTypesToShow = roomTypes.getTypesToShowOnDashboard() as IRoom['t'][];
 	const responseTypes = origins.map((origin) => origin.t);
 	const missingTypes = roomTypesToShow.filter((type) => !responseTypes.includes(type));
 	if (missingTypes.length) {
@@ -121,11 +129,11 @@ export const findTopFivePopularChannelsByMessageSentQuantity = async ({ start, e
 		usernames?: IDirectMessageRoom['usernames'];
 	}[];
 }> => {
-	const channels = await AnalyticsRaw.getMostPopularChannelsByMessagesSentQuantity({
+	const channels = await Analytics.getMostPopularChannelsByMessagesSentQuantity({
 		start: convertDateToInt(start),
 		end: convertDateToInt(end),
 		options: { count: 5, sort: { messages: -1 } },
-	});
+	}).toArray();
 
 	return { channels };
 };
