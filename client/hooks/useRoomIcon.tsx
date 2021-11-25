@@ -46,7 +46,7 @@ export const useRoomIcon = (room: IRoom): ReactNode | { name: string; color?: st
 			if (direct.uids && direct.uids.length > 2) {
 				return { name: 'balloon' };
 			}
-			if (direct.uids && direct.uids.length > 0) {
+			if (room.u && room.u._id && direct.uids && direct.uids.length > 0) {
 				return (
 					<ReactiveUserStatus
 						{...({

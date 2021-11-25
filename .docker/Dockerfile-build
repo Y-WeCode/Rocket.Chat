@@ -1,0 +1,16 @@
+FROM node:12.22.1-buster-slim
+
+RUN apt-get update
+
+RUN apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    python3 \
+    make \
+    g++ \
+    fontconfig
+
+RUN curl https://install.meteor.com/ | sh
+
+WORKDIR /app

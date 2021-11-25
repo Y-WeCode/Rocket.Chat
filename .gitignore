@@ -82,3 +82,5 @@ tests/end-to-end/temporary_staged_test
 /tests/cypress/screenshots
 coverage
 .nyc_output
+
+/bundle
