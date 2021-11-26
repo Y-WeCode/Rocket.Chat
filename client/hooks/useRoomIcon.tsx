@@ -44,7 +44,7 @@ export const useRoomIcon = (room: IRoom): ReactNode | { name: string; color?: st
 		case 'd':
 			const direct = room as unknown as IDirectMessageRoom;
 			if (direct.uids && direct.uids.length > 2) {
-				return { name: 'balloon' };
+				return { name: 'at' };
 			}
 			if (room.u && room.u._id && direct.uids && direct.uids.length > 0) {
 				return (

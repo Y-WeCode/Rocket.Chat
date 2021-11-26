@@ -9,8 +9,17 @@ RUN apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
-    fontconfig
+    fontconfig \
+    libvips-dev
 
 RUN curl https://install.meteor.com/ | sh
+
+RUN rm package-lock.json
+
+RUN npm install sharp
+
+RUN meteor npm install
+
+RUN meteor npm build --allow-superuser
 
 WORKDIR /app
